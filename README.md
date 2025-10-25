@@ -1,20 +1,53 @@
 # Claude Skills Library
 
-A comprehensive collection of 9 production-ready Claude Skills covering document manipulation, testing, database management, development tools, and communication workflows.
+A comprehensive collection of 16 production-ready Claude Skills covering document manipulation, testing, database management, API design, DevOps, code quality, and communication workflows.
+
+## 📋 Guides & Resources
+
+- **[SKILL_CREATION_GUIDE.md](./SKILL_CREATION_GUIDE.md)** - Comprehensive guide for creating high-quality Claude Skills (1,247 lines)
+- **[SKILL_BUILDER_SUBAGENT.md](./SKILL_BUILDER_SUBAGENT.md)** - Magic prompt for spawning specialized skill-building agents
 
 ## 📚 Skills Overview
 
+### Document Manipulation (3 skills)
 | Skill | Description | Files |
 |-------|-------------|-------|
 | **[xlsx](./xlsx/)** | Excel spreadsheet creation, editing, and analysis with formulas, charts, and data manipulation | SKILL.md + 3 Python scripts |
 | **[pptx](./pptx/)** | PowerPoint presentation creation with layouts, charts, and professional formatting | SKILL.md + Python helper |
 | **[pdf](./pdf/)** | PDF manipulation including text extraction, form filling, merging, and creation | SKILL.md + Python helper |
+
+### Development & Testing (4 skills)
+| Skill | Description | Files |
+|-------|-------------|-------|
 | **[webapp-testing](./webapp-testing/)** | Playwright-based web application testing with multi-browser support | SKILL.md + 2 Python scripts |
 | **[mcp-builder](./mcp-builder/)** | Guide for building Model Context Protocol (MCP) servers | SKILL.md + 3 examples |
+| **[d3js-visualization](./d3js-visualization/)** | Data visualization with D3.js for interactive charts and dashboards | SKILL.md + scripts + 3 examples |
+| **[api-designer](./api-designer/)** | REST/GraphQL API design with OpenAPI 3.0 specs and authentication patterns | SKILL.md + Python helper + examples |
+
+### Database & Backend (1 skill)
+| Skill | Description | Files |
+|-------|-------------|-------|
+| **[sql-expert](./sql-expert/)** | SQL query writing, optimization, and database schema design for PostgreSQL, MySQL, SQLite | SKILL.md + Python helper + 2,690 lines SQL examples |
+
+### DevOps & Infrastructure (2 skills)
+| Skill | Description | Files |
+|-------|-------------|-------|
+| **[docker-workflow](./docker-workflow/)** | Docker containerization with multi-stage builds, compose orchestration, and optimization | SKILL.md + Bash helper + examples |
+| **[env-config](./env-config/)** | Environment variable management with UV integration, secrets handling, and multi-env support | SKILL.md + Python helper + examples |
+
+### Code Quality & Debugging (3 skills)
+| Skill | Description | Files |
+|-------|-------------|-------|
+| **[git-advanced](./git-advanced/)** | Advanced Git operations including rebasing, conflict resolution, and branch strategies | SKILL.md + Bash helper + guides |
+| **[code-reviewer](./code-reviewer/)** | Automated code review with security scanning, quality metrics, and best practice enforcement | SKILL.md + Python helper + checklists |
+| **[error-detective](./error-detective/)** | Systematic debugging with TRACE framework, stack trace analysis, and error pattern recognition | SKILL.md + Python helper + examples |
+
+### Communication & Documentation (3 skills)
+| Skill | Description | Files |
+|-------|-------------|-------|
 | **[brand-guidelines](./brand-guidelines/)** | Corporate brand consistency enforcement and style guide creation | SKILL.md + 3 templates |
 | **[internal-comms](./internal-comms/)** | Internal communications templates for status reports and newsletters | SKILL.md + 4 templates |
-| **[d3js-visualization](./d3js-visualization/)** | Data visualization with D3.js for interactive charts and dashboards | SKILL.md + scripts + 3 examples |
-| **[sql-expert](./sql-expert/)** | SQL query writing, optimization, and database schema design | SKILL.md + Python helper + 2,690 lines SQL examples |
+| **[markdown-pro](./markdown-pro/)** | Professional documentation with README generation, changelog automation, and TOC generation | SKILL.md + Python helper + templates |
 
 ## 🚀 Quick Start
 
@@ -47,6 +80,31 @@ pip install mcp anthropic  # Python SDK for MCP
 
 # D3.js Visualization (d3js-visualization)
 # No installation needed - pure JavaScript, run examples in browser
+
+# API Designer (api-designer)
+pip install pydantic fastapi jsonschema pyyaml
+
+# SQL Expert (sql-expert)
+pip install sqlalchemy psycopg2-binary pymysql
+
+# Docker Workflow (docker-workflow)
+# Requires Docker installed - no Python dependencies
+
+# Environment Config (env-config)
+# Requires UV: curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install python-dotenv cryptography pydantic pydantic-settings
+
+# Git Advanced (git-advanced)
+# No dependencies - uses git CLI
+
+# Code Reviewer (code-reviewer)
+pip install bandit safety radon pylint black
+
+# Error Detective (error-detective)
+# No dependencies - includes built-in utilities
+
+# Markdown Pro (markdown-pro)
+pip install gitpython markdown
 ```
 
 ## 📖 Skill Details
