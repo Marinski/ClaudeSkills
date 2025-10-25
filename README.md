@@ -1,6 +1,6 @@
 # Claude Skills Library
 
-A comprehensive collection of 8 production-ready Claude Skills covering document manipulation, testing, development tools, and communication workflows.
+A comprehensive collection of 9 production-ready Claude Skills covering document manipulation, testing, database management, development tools, and communication workflows.
 
 ## 📚 Skills Overview
 
@@ -14,6 +14,7 @@ A comprehensive collection of 8 production-ready Claude Skills covering document
 | **[brand-guidelines](./brand-guidelines/)** | Corporate brand consistency enforcement and style guide creation | SKILL.md + 3 templates |
 | **[internal-comms](./internal-comms/)** | Internal communications templates for status reports and newsletters | SKILL.md + 4 templates |
 | **[d3js-visualization](./d3js-visualization/)** | Data visualization with D3.js for interactive charts and dashboards | SKILL.md + scripts + 3 examples |
+| **[sql-expert](./sql-expert/)** | SQL query writing, optimization, and database schema design | SKILL.md + Python helper + 2,690 lines SQL examples |
 
 ## 🚀 Quick Start
 
