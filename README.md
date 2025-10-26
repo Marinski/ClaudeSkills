@@ -112,11 +112,15 @@ pip install gitpython markdown
 To package all skills as individual .zip files for drag-and-drop installation into Claude Desktop:
 
 ```bash
-# Create ZippedSkills directory and zip all skills
-mkdir -p ZippedSkills && for skill in api-designer brand-guidelines code-reviewer d3js-visualization docker-workflow env-config error-detective git-advanced internal-comms markdown-pro mcp-builder pdf pptx sql-expert webapp-testing xlsx; do (cd "$skill" && zip -r "../ZippedSkills/${skill}.zip" . -x "*.DS_Store" -x "__pycache__/*") && echo "✓ Zipped $skill"; done
+# Create ZippedSkills directory and zip all skill folders automatically
+mkdir -p ZippedSkills && for skill in */; do
+  [[ "$skill" == "ZippedSkills/" ]] && continue
+  skill_name="${skill%/}"
+  (cd "$skill_name" && zip -r "../ZippedSkills/${skill_name}.zip" . -x "*.DS_Store" -x "__pycache__/*") && echo "✓ Zipped $skill_name"
+done
 ```
 
-This creates a `ZippedSkills/` folder containing 16 .zip files ready for installation.
+This creates a `ZippedSkills/` folder containing individual .zip files for all skills, automatically detecting new skills as they're added.
 
 ## 📖 Skill Details
 
