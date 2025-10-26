@@ -43,3 +43,6 @@ screenshots/
 
 # Node modules
 node_modules/
+
+# Distribution artifacts
+ZippedSkills/
