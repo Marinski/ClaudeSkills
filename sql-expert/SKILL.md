@@ -5,23 +5,7 @@ description: "Expert SQL query writing, optimization, and database schema design
 
 # SQL Expert Skill
 
-A comprehensive guide for writing, optimizing, and managing SQL databases across multiple database systems (PostgreSQL, MySQL, SQLite, SQL Server).
-
-## Table of Contents
-
-1. [Core Capabilities](#core-capabilities)
-2. [Supported Database Systems](#supported-database-systems)
-3. [Installation](#installation)
-4. [Query Writing](#query-writing)
-5. [Query Optimization](#query-optimization)
-6. [Schema Design](#schema-design)
-7. [Indexes and Performance](#indexes-and-performance)
-8. [Migrations](#migrations)
-9. [Advanced SQL Patterns](#advanced-sql-patterns)
-10. [Best Practices](#best-practices)
-11. [Common Pitfalls](#common-pitfalls)
-
----
+Expert guidance for writing, optimizing, and managing SQL databases across PostgreSQL, MySQL, SQLite, and SQL Server.
 
 ## Core Capabilities
 
@@ -74,7 +58,7 @@ pip install pyodbc sqlalchemy
 
 ## Query Writing
 
-### Basic SELECT Queries
+### Basic SELECT with JOINs
 
 ```sql
 -- Simple SELECT with filtering
@@ -90,11 +74,7 @@ WHERE
 ORDER BY
     column1 DESC
 LIMIT 10;
-```
 
-### JOINs
-
-```sql
 -- INNER JOIN
 SELECT
     users.name,
@@ -117,121 +97,38 @@ FROM
 LEFT JOIN
     orders ON users.id = orders.user_id
 GROUP BY
-    users.id, users.name
-ORDER BY
-    total_spent DESC;
-
--- SELF JOIN (for hierarchical data)
-SELECT
-    e.name as employee_name,
-    m.name as manager_name
-FROM
-    employees e
-LEFT JOIN
-    employees m ON e.manager_id = m.id;
+    users.id, users.name;
 ```
 
-### Subqueries
+### Subqueries and CTEs
 
 ```sql
 -- Subquery in WHERE clause
-SELECT
-    name,
-    salary
-FROM
-    employees
-WHERE
-    salary > (SELECT AVG(salary) FROM employees);
+SELECT name, salary
+FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
 
--- Subquery in FROM clause (derived table)
-SELECT
-    dept_stats.department,
-    dept_stats.avg_salary
-FROM (
-    SELECT
-        department,
-        AVG(salary) as avg_salary,
-        COUNT(*) as employee_count
-    FROM
-        employees
-    GROUP BY
-        department
-) dept_stats
-WHERE
-    dept_stats.employee_count > 5;
-
--- Correlated subquery
-SELECT
-    e1.name,
-    e1.department,
-    e1.salary
-FROM
-    employees e1
-WHERE
-    e1.salary > (
-        SELECT AVG(e2.salary)
-        FROM employees e2
-        WHERE e2.department = e1.department
-    );
-```
-
-### Common Table Expressions (CTEs)
-
-```sql
--- Basic CTE
+-- Common Table Expression (CTE)
 WITH high_value_customers AS (
     SELECT
         user_id,
         SUM(total_amount) as lifetime_value
-    FROM
-        orders
-    GROUP BY
-        user_id
-    HAVING
-        SUM(total_amount) > 1000
+    FROM orders
+    GROUP BY user_id
+    HAVING SUM(total_amount) > 1000
 )
 SELECT
     users.name,
     users.email,
     hvc.lifetime_value
-FROM
-    users
-INNER JOIN
-    high_value_customers hvc ON users.id = hvc.user_id;
-
--- Recursive CTE (for hierarchical data)
-WITH RECURSIVE employee_hierarchy AS (
-    -- Anchor member: top-level employees
-    SELECT
-        id,
-        name,
-        manager_id,
-        1 as level
-    FROM
-        employees
-    WHERE
-        manager_id IS NULL
-
-    UNION ALL
-
-    -- Recursive member: employees reporting to previous level
-    SELECT
-        e.id,
-        e.name,
-        e.manager_id,
-        eh.level + 1
-    FROM
-        employees e
-    INNER JOIN
-        employee_hierarchy eh ON e.manager_id = eh.id
-)
-SELECT * FROM employee_hierarchy ORDER BY level, name;
+FROM users
+INNER JOIN high_value_customers hvc ON users.id = hvc.user_id;
 ```
 
 ### Window Functions
 
 ```sql
--- ROW_NUMBER (assign unique row numbers)
+-- Ranking within groups
 SELECT
     name,
     department,
@@ -240,17 +137,7 @@ SELECT
 FROM
     employees;
 
--- RANK and DENSE_RANK
-SELECT
-    name,
-    department,
-    salary,
-    RANK() OVER (PARTITION BY department ORDER BY salary DESC) as rank,
-    DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) as dense_rank
-FROM
-    employees;
-
--- Running totals with SUM
+-- Running totals
 SELECT
     order_date,
     total_amount,
@@ -268,17 +155,9 @@ SELECT
     ) as moving_avg_7days
 FROM
     daily_sales;
-
--- LAG and LEAD (access previous/next row values)
-SELECT
-    order_date,
-    total_amount,
-    LAG(total_amount, 1) OVER (ORDER BY order_date) as prev_day_amount,
-    LEAD(total_amount, 1) OVER (ORDER BY order_date) as next_day_amount,
-    total_amount - LAG(total_amount, 1) OVER (ORDER BY order_date) as day_over_day_change
-FROM
-    daily_sales;
 ```
+
+See `examples/complex_queries.sql` for more advanced query patterns.
 
 ---
 
@@ -287,17 +166,14 @@ FROM
 ### Using EXPLAIN
 
 ```sql
--- PostgreSQL EXPLAIN
+-- Analyze query performance
 EXPLAIN ANALYZE
 SELECT
     users.name,
     COUNT(orders.id) as order_count
-FROM
-    users
-LEFT JOIN
-    orders ON users.id = orders.user_id
-GROUP BY
-    users.id, users.name;
+FROM users
+LEFT JOIN orders ON users.id = orders.user_id
+GROUP BY users.id, users.name;
 
 -- Look for:
 -- - Seq Scan (bad) vs Index Scan (good)
@@ -305,79 +181,34 @@ GROUP BY
 -- - Large row counts being processed
 ```
 
-### Key Performance Indicators
-
-- **Seq Scan**: Table scan without index (slow for large tables)
-- **Index Scan**: Using an index (fast)
-- **Index Only Scan**: Best case - all data from index
-- **Nested Loop**: Good for small datasets
-- **Hash Join**: Good for larger datasets
-- **Merge Join**: Good for sorted data
-
-### Optimization Techniques
+### Quick Optimization Tips
 
 ```sql
--- BAD: Using OR with different columns
-SELECT * FROM users WHERE first_name = 'John' OR last_name = 'Smith';
-
--- GOOD: Use UNION if possible
-SELECT * FROM users WHERE first_name = 'John'
-UNION
-SELECT * FROM users WHERE last_name = 'Smith';
-
--- BAD: Function on indexed column prevents index usage
+-- BAD: Function on indexed column
 SELECT * FROM users WHERE LOWER(email) = 'user@example.com';
 
--- GOOD: Use functional index or store lowercase
+-- GOOD: Keep indexed column clean
 SELECT * FROM users WHERE email = LOWER('user@example.com');
--- Create index: CREATE INDEX idx_email_lower ON users(LOWER(email));
 
 -- BAD: SELECT *
 SELECT * FROM large_table WHERE id = 123;
 
 -- GOOD: Select only needed columns
 SELECT id, name, email FROM large_table WHERE id = 123;
-
--- BAD: Subquery in SELECT (executes for each row)
-SELECT
-    name,
-    (SELECT COUNT(*) FROM orders WHERE user_id = users.id) as order_count
-FROM
-    users;
-
--- GOOD: Use JOIN instead
-SELECT
-    users.name,
-    COUNT(orders.id) as order_count
-FROM
-    users
-LEFT JOIN
-    orders ON users.id = orders.user_id
-GROUP BY
-    users.id, users.name;
 ```
+
+For comprehensive optimization techniques, see `references/query-optimization.md`.
 
 ---
 
 ## Schema Design
 
-### Normalization
+### Normalization Principles
 
-#### First Normal Form (1NF)
-- Eliminate repeating groups
-- Each field contains atomic values
+**First Normal Form (1NF)**: Eliminate repeating groups, use atomic values
 
 ```sql
--- BAD: Repeating groups
-CREATE TABLE orders_bad (
-    order_id INT PRIMARY KEY,
-    customer_name VARCHAR(100),
-    product1 VARCHAR(100),
-    product2 VARCHAR(100),
-    product3 VARCHAR(100)
-);
-
--- GOOD: Separate table for products
+-- GOOD: Separate table for order items
 CREATE TABLE orders (
     order_id INT PRIMARY KEY,
     customer_name VARCHAR(100)
@@ -390,21 +221,9 @@ CREATE TABLE order_items (
 );
 ```
 
-#### Second Normal Form (2NF)
-- Meet 1NF
-- All non-key attributes depend on the entire primary key
+**Second Normal Form (2NF)**: All non-key attributes depend on entire primary key
 
 ```sql
--- BAD: Product info depends only on product_id, not the composite key
-CREATE TABLE order_items_bad (
-    order_id INT,
-    product_id INT,
-    product_name VARCHAR(100),
-    product_price DECIMAL(10, 2),
-    quantity INT,
-    PRIMARY KEY (order_id, product_id)
-);
-
 -- GOOD: Separate product information
 CREATE TABLE products (
     product_id INT PRIMARY KEY,
@@ -421,36 +240,11 @@ CREATE TABLE order_items (
 );
 ```
 
-#### Third Normal Form (3NF)
-- Meet 2NF
-- No transitive dependencies
-
-```sql
--- BAD: city_state depends on city, not customer_id
-CREATE TABLE customers_bad (
-    customer_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    city VARCHAR(100),
-    city_state VARCHAR(2)  -- Depends on city, not customer_id
-);
-
--- GOOD: Separate cities table
-CREATE TABLE cities (
-    city_id INT PRIMARY KEY,
-    city_name VARCHAR(100),
-    state VARCHAR(2)
-);
-
-CREATE TABLE customers (
-    customer_id INT PRIMARY KEY,
-    name VARCHAR(100),
-    city_id INT REFERENCES cities(city_id)
-);
-```
+**Third Normal Form (3NF)**: No transitive dependencies
 
 ### Common Schema Patterns
 
-#### One-to-Many
+**One-to-Many:**
 
 ```sql
 CREATE TABLE authors (
@@ -468,7 +262,7 @@ CREATE TABLE books (
 );
 ```
 
-#### Many-to-Many
+**Many-to-Many:**
 
 ```sql
 CREATE TABLE students (
@@ -494,16 +288,7 @@ CREATE TABLE enrollments (
 );
 ```
 
-#### Self-Referencing (Hierarchical)
-
-```sql
-CREATE TABLE categories (
-    category_id INT PRIMARY KEY,
-    category_name VARCHAR(100),
-    parent_category_id INT,
-    FOREIGN KEY (parent_category_id) REFERENCES categories(category_id)
-);
-```
+See `examples/schema_examples.sql` for more schema patterns.
 
 ---
 
@@ -523,12 +308,6 @@ CREATE UNIQUE INDEX idx_users_username ON users(username);
 
 -- Partial index (PostgreSQL)
 CREATE INDEX idx_active_users ON users(email) WHERE status = 'active';
-
--- Functional index
-CREATE INDEX idx_users_email_lower ON users(LOWER(email));
-
--- Full-text search index (PostgreSQL)
-CREATE INDEX idx_posts_search ON posts USING GIN(to_tsvector('english', title || ' ' || content));
 ```
 
 ### Index Guidelines
@@ -538,45 +317,21 @@ CREATE INDEX idx_posts_search ON posts USING GIN(to_tsvector('english', title ||
 - ✅ Columns used in JOIN conditions
 - ✅ Columns used in ORDER BY
 - ✅ Foreign key columns
-- ✅ Columns with high selectivity (many unique values)
 
 **When NOT to create indexes:**
 - ❌ Small tables (< 1000 rows)
-- ❌ Columns with low selectivity (few unique values like boolean)
+- ❌ Columns with low selectivity (boolean fields)
 - ❌ Columns frequently updated
-- ❌ Too many indexes on one table (slows INSERTs/UPDATEs)
 
-### Index Maintenance
-
-```sql
--- PostgreSQL: Rebuild index
-REINDEX INDEX idx_users_email;
-
--- MySQL: Optimize table
-OPTIMIZE TABLE users;
-
--- Check index usage (PostgreSQL)
-SELECT
-    schemaname,
-    tablename,
-    indexname,
-    idx_scan,
-    idx_tup_read,
-    idx_tup_fetch
-FROM
-    pg_stat_user_indexes
-ORDER BY
-    idx_scan ASC;
-```
+For detailed index strategies, see `references/indexes-performance.md`.
 
 ---
 
 ## Migrations
 
-### Migration Best Practices
+### Safe Migration Pattern
 
 ```sql
--- Migration: Add new column with default
 -- Step 1: Add column as nullable
 ALTER TABLE users ADD COLUMN status VARCHAR(20);
 
@@ -596,9 +351,6 @@ ALTER TABLE users DROP COLUMN status;
 ### Zero-Downtime Migrations
 
 ```sql
--- BAD: This locks the table
-ALTER TABLE large_table ADD COLUMN new_column VARCHAR(100) NOT NULL DEFAULT 'value';
-
 -- GOOD: Add column as nullable first, then backfill
 ALTER TABLE large_table ADD COLUMN new_column VARCHAR(100);
 
@@ -610,30 +362,16 @@ UPDATE large_table SET new_column = 'value' WHERE new_column IS NULL LIMIT 1000;
 ALTER TABLE large_table ALTER COLUMN new_column SET NOT NULL;
 ```
 
-### Renaming Columns Safely
-
-```sql
--- Step 1: Add new column
-ALTER TABLE users ADD COLUMN email_address VARCHAR(100);
-
--- Step 2: Copy data
-UPDATE users SET email_address = email;
-
--- Step 3: Update application to use both columns
--- (Deploy application code)
-
--- Step 4: Drop old column (after verification)
-ALTER TABLE users DROP COLUMN email;
-```
+See `examples/migrations.sql` for more migration patterns.
 
 ---
 
-## Advanced SQL Patterns
+## Advanced Patterns
 
 ### UPSERT (Insert or Update)
 
 ```sql
--- PostgreSQL: ON CONFLICT
+-- PostgreSQL
 INSERT INTO users (user_id, name, email, updated_at)
 VALUES (1, 'John Doe', 'john@example.com', NOW())
 ON CONFLICT (user_id)
@@ -642,141 +380,56 @@ DO UPDATE SET
     email = EXCLUDED.email,
     updated_at = NOW();
 
--- MySQL: ON DUPLICATE KEY UPDATE
+-- MySQL
 INSERT INTO users (user_id, name, email, updated_at)
 VALUES (1, 'John Doe', 'john@example.com', NOW())
 ON DUPLICATE KEY UPDATE
     name = VALUES(name),
     email = VALUES(email),
     updated_at = NOW();
-
--- SQLite: ON CONFLICT
-INSERT INTO users (user_id, name, email, updated_at)
-VALUES (1, 'John Doe', 'john@example.com', datetime('now'))
-ON CONFLICT(user_id) DO UPDATE SET
-    name = excluded.name,
-    email = excluded.email,
-    updated_at = datetime('now');
 ```
 
-### Bulk Operations
+### Recursive CTEs
 
 ```sql
--- Bulk INSERT
-INSERT INTO users (name, email) VALUES
-    ('Alice', 'alice@example.com'),
-    ('Bob', 'bob@example.com'),
-    ('Charlie', 'charlie@example.com');
+-- Hierarchical data traversal
+WITH RECURSIVE employee_hierarchy AS (
+    -- Anchor: top-level employees
+    SELECT id, name, manager_id, 1 as level
+    FROM employees
+    WHERE manager_id IS NULL
 
--- Bulk UPDATE from another table
-UPDATE products p
-SET price = new_prices.price
-FROM (
-    VALUES
-        (1, 19.99),
-        (2, 29.99),
-        (3, 39.99)
-) AS new_prices(product_id, price)
-WHERE p.product_id = new_prices.product_id;
+    UNION ALL
 
--- Bulk DELETE with JOIN
-DELETE FROM orders
-WHERE order_id IN (
-    SELECT order_id
-    FROM orders o
-    INNER JOIN users u ON o.user_id = u.user_id
-    WHERE u.status = 'deleted'
-);
-```
-
-### Pivot Tables
-
-```sql
--- Transform rows to columns
-SELECT
-    product_name,
-    SUM(CASE WHEN EXTRACT(MONTH FROM order_date) = 1 THEN quantity ELSE 0 END) as jan,
-    SUM(CASE WHEN EXTRACT(MONTH FROM order_date) = 2 THEN quantity ELSE 0 END) as feb,
-    SUM(CASE WHEN EXTRACT(MONTH FROM order_date) = 3 THEN quantity ELSE 0 END) as mar
-FROM
-    order_items oi
-INNER JOIN
-    products p ON oi.product_id = p.product_id
-GROUP BY
-    product_name;
-
--- PostgreSQL crosstab (requires tablefunc extension)
-CREATE EXTENSION IF NOT EXISTS tablefunc;
-
-SELECT * FROM crosstab(
-    'SELECT product_name, month, total_quantity
-     FROM monthly_sales
-     ORDER BY 1, 2',
-    'SELECT DISTINCT month FROM monthly_sales ORDER BY 1'
-) AS ct(product_name TEXT, jan INT, feb INT, mar INT);
-```
-
-### JSON Operations (PostgreSQL)
-
-```sql
--- Query JSON data
-SELECT
-    user_id,
-    preferences->>'theme' as theme,
-    preferences->>'language' as language
-FROM
-    users
-WHERE
-    preferences->>'notifications' = 'true';
-
--- Update JSON field
-UPDATE users
-SET preferences = jsonb_set(
-    preferences,
-    '{theme}',
-    '"dark"'
+    -- Recursive: employees reporting to previous level
+    SELECT e.id, e.name, e.manager_id, eh.level + 1
+    FROM employees e
+    INNER JOIN employee_hierarchy eh ON e.manager_id = eh.id
 )
-WHERE user_id = 123;
-
--- JSON aggregation
-SELECT
-    department,
-    jsonb_agg(jsonb_build_object(
-        'name', name,
-        'salary', salary
-    )) as employees
-FROM
-    employees
-GROUP BY
-    department;
+SELECT * FROM employee_hierarchy ORDER BY level, name;
 ```
+
+For more advanced patterns including pivot tables, JSON operations, and bulk operations, see `references/advanced-patterns.md`.
 
 ---
 
 ## Best Practices
 
-### 1. Always Use Parameterized Queries
-```python
-# BAD: SQL injection vulnerable
-query = f"SELECT * FROM users WHERE email = '{user_input}'"
+### Critical Guidelines
 
-# GOOD: Parameterized query
-query = "SELECT * FROM users WHERE email = %s"
-cursor.execute(query, (user_input,))
-```
+1. **Always use parameterized queries** to prevent SQL injection
+2. **Use transactions for related operations** to ensure atomicity
+3. **Add appropriate constraints** (PRIMARY KEY, FOREIGN KEY, NOT NULL, CHECK)
+4. **Include timestamps** (created_at, updated_at) on tables
+5. **Use meaningful names** for tables and columns
+6. **Avoid SELECT *** - specify only needed columns
+7. **Index foreign keys** for join performance
+8. **Use VARCHAR instead of CHAR** for variable-length strings
+9. **Handle NULL values properly** with IS NULL / IS NOT NULL
+10. **Use appropriate data types** (DECIMAL for money, not FLOAT)
 
-### 2. Use Transactions for Related Operations
-```sql
-BEGIN TRANSACTION;
+Example with multiple best practices:
 
-UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
-UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
-
-COMMIT;
--- Or ROLLBACK if something goes wrong
-```
-
-### 3. Add Appropriate Constraints
 ```sql
 CREATE TABLE orders (
     order_id INT PRIMARY KEY,
@@ -784,124 +437,97 @@ CREATE TABLE orders (
     order_date DATE NOT NULL DEFAULT CURRENT_DATE,
     total_amount DECIMAL(10, 2) CHECK (total_amount >= 0),
     status VARCHAR(20) CHECK (status IN ('pending', 'completed', 'cancelled')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
+
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);
 ```
 
-### 4. Use VARCHAR Instead of CHAR for Variable-Length Strings
-```sql
--- BAD: Wastes space
-CREATE TABLE users (name CHAR(100));
-
--- GOOD: Only uses needed space
-CREATE TABLE users (name VARCHAR(100));
-```
-
-### 5. Include Timestamps
-```sql
-CREATE TABLE posts (
-    post_id INT PRIMARY KEY,
-    title VARCHAR(200),
-    content TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### 6. Use Meaningful Names
-```sql
--- BAD
-CREATE TABLE t1 (id INT, n VARCHAR(100));
-
--- GOOD
-CREATE TABLE customers (customer_id INT, customer_name VARCHAR(100));
-```
+For comprehensive best practices, see `references/best-practices.md`.
 
 ---
 
 ## Common Pitfalls
 
-### 1. N+1 Query Problem
+Watch out for these frequent issues:
+
+1. **N+1 Query Problem** - Use JOINs instead of loops with queries
+2. **Not using LIMIT** for exploratory queries on large tables
+3. **Implicit type conversions** preventing index usage
+4. **Using COUNT(*) when EXISTS is sufficient**
+5. **Not handling NULLs properly** (NULL = NULL is always NULL, not TRUE)
+6. **Using SELECT DISTINCT** as a band-aid instead of fixing the query
+7. **Forgetting transactions** for related operations
+8. **Using functions on indexed columns** preventing index usage
+
+Example - Avoiding N+1:
+
 ```python
-# BAD: N+1 queries (1 + N queries total)
+# BAD: N+1 queries
 users = db.query("SELECT * FROM users")
 for user in users:
     orders = db.query("SELECT * FROM orders WHERE user_id = ?", user.id)
-    # This executes a query for EACH user
 
 # GOOD: Single query with JOIN
 result = db.query("""
-    SELECT
-        users.*,
-        orders.*
+    SELECT users.*, orders.*
     FROM users
     LEFT JOIN orders ON users.id = orders.user_id
 """)
 ```
 
-### 2. Not Using LIMIT
-```sql
--- BAD: Returns all rows (could be millions)
-SELECT * FROM large_table WHERE status = 'active';
-
--- GOOD: Limit results for exploratory queries
-SELECT * FROM large_table WHERE status = 'active' LIMIT 100;
-```
-
-### 3. Implicit Type Conversions
-```sql
--- BAD: String comparison on INT column prevents index usage
-SELECT * FROM users WHERE user_id = '123';
-
--- GOOD: Use correct type
-SELECT * FROM users WHERE user_id = 123;
-```
-
-### 4. Using COUNT(*) When You Just Need EXISTS
-```sql
--- BAD: Counts all rows
-SELECT COUNT(*) FROM orders WHERE user_id = 123;
-
--- GOOD: Just check existence
-SELECT EXISTS(SELECT 1 FROM orders WHERE user_id = 123);
-```
-
-### 5. Not Handling NULLs Properly
-```sql
--- BAD: NULL comparisons always return NULL (not TRUE or FALSE)
-SELECT * FROM users WHERE deleted_at = NULL;  -- Returns no rows!
-
--- GOOD: Use IS NULL / IS NOT NULL
-SELECT * FROM users WHERE deleted_at IS NULL;
-```
-
-### 6. Using SELECT DISTINCT Instead of Fixing the Query
-```sql
--- BAD: Band-aid solution
-SELECT DISTINCT user_id, name FROM users
-JOIN orders ON users.id = orders.user_id;
-
--- GOOD: Fix the underlying issue
-SELECT users.id, users.name FROM users
-WHERE EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id);
-```
+For a complete list of pitfalls and solutions, see `references/common-pitfalls.md`.
 
 ---
 
-## Helper Scripts
+## Helper Scripts and Examples
 
-See `scripts/sql_helper.py` for utility functions including:
-- Query builder with parameterization
-- Schema introspection
-- Index analysis
-- Query execution timing
-- Migration helpers
-- Sample data generation
+### Available Resources
 
-## Examples
+**Helper Scripts** (`scripts/`):
+- `sql_helper.py` - Utility functions for query building, schema introspection, index analysis, and migration helpers
 
-See `examples/` directory for:
-- Complex query examples
-- Schema design patterns
-- Migration scripts
-- Performance optimization examples
+**Examples** (`examples/`):
+- `complex_queries.sql` - Advanced query patterns with CTEs, window functions, and subqueries
+- `schema_examples.sql` - Complete schema design examples for various use cases
+- `migrations.sql` - Safe migration patterns and zero-downtime techniques
+
+**References** (`references/`):
+- `query-optimization.md` - Comprehensive query optimization techniques and EXPLAIN analysis
+- `indexes-performance.md` - Detailed index strategies, maintenance, and monitoring
+- `advanced-patterns.md` - UPSERT, bulk operations, pivot tables, JSON operations, recursive queries
+- `best-practices.md` - Complete SQL best practices guide
+- `common-pitfalls.md` - Common mistakes and how to avoid them
+
+### Quick Start
+
+1. For basic queries, use the patterns shown above
+2. For optimization, start with EXPLAIN and check `references/query-optimization.md`
+3. For schema design, review normalization patterns and see `examples/schema_examples.sql`
+4. For complex scenarios, check `references/advanced-patterns.md`
+5. For utilities, use `scripts/sql_helper.py`
+
+---
+
+## Workflow
+
+When working with SQL databases:
+
+1. **Understand requirements** - What data needs to be queried or stored?
+2. **Design schema** - Apply normalization, choose appropriate data types
+3. **Create indexes** - Index foreign keys and frequently queried columns
+4. **Write queries** - Start simple, add complexity as needed
+5. **Optimize** - Use EXPLAIN to identify bottlenecks
+6. **Test** - Verify with sample data and edge cases
+7. **Document** - Add comments for complex queries
+
+For migrations:
+1. **Plan changes** - Identify affected tables and dependencies
+2. **Write migration** - Create both up and down migrations
+3. **Test on copy** - Test on development database first
+4. **Backup** - Always backup before running migrations
+5. **Execute** - Run migrations during low-traffic periods
+6. **Verify** - Check data integrity after migration
