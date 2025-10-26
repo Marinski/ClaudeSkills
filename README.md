@@ -107,6 +107,17 @@ pip install bandit safety radon pylint black
 pip install gitpython markdown
 ```
 
+### Creating Zipped Skills for Distribution
+
+To package all skills as individual .zip files for drag-and-drop installation into Claude Desktop:
+
+```bash
+# Create ZippedSkills directory and zip all skills
+mkdir -p ZippedSkills && for skill in api-designer brand-guidelines code-reviewer d3js-visualization docker-workflow env-config error-detective git-advanced internal-comms markdown-pro mcp-builder pdf pptx sql-expert webapp-testing xlsx; do (cd "$skill" && zip -r "../ZippedSkills/${skill}.zip" . -x "*.DS_Store" -x "__pycache__/*") && echo "✓ Zipped $skill"; done
+```
+
+This creates a `ZippedSkills/` folder containing 16 .zip files ready for installation.
+
 ## 📖 Skill Details
 
 ### Document Manipulation Skills
