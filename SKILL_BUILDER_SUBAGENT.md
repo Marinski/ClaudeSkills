@@ -53,15 +53,29 @@ description: "Clear, comprehensive description of capabilities and use cases. In
 - Additional Resources: Links, documentation, references
 
 ### Size Guidelines
-Based on existing skills in the library:
-- **Simple skills**: 900-1,500 lines (sql-expert, d3js-visualization)
-- **Medium skills**: 1,300-2,000 lines (xlsx, pptx, pdf, webapp-testing, internal-comms)
-- **Complex skills**: 2,500-4,500 lines (mcp-builder, brand-guidelines)
+Based on analysis of 16 existing skills in the library (as of 2025-10-25):
 
-Target length based on complexity:
-- Documentation-focused skills: 1,500-2,500 lines
-- Code-heavy skills with examples: 1,300-1,800 lines
-- Comprehensive guides: 2,500-4,500 lines
+**Actual SKILL.md Size Distribution:**
+- **Small skills** (276-400 lines): brand-guidelines (276), internal-comms (292), xlsx (372), webapp-testing (381)
+- **Medium skills** (401-500 lines): d3js-visualization (417), pptx (424), code-reviewer (431), markdown-pro (453), docker-workflow (457), git-advanced (497)
+- **Large skills** (501-593 lines): mcp-builder (513), env-config (526), sql-expert (533), pdf (542), api-designer (558), error-detective (593)
+
+**Statistics:**
+- Range: 276-593 lines
+- Average: ~443 lines
+- Median: ~454 lines
+
+**Target Lengths by Skill Type:**
+- **Focused utility skills** (tools, libraries): 350-450 lines (xlsx, pptx, pdf, d3js-visualization)
+- **Workflow/process skills** (development practices): 400-500 lines (code-reviewer, docker-workflow, git-advanced)
+- **Comprehensive guide skills** (complex systems): 500-600 lines (mcp-builder, sql-expert, api-designer, error-detective)
+- **Lightweight reference skills** (templates, guidelines): 275-350 lines (brand-guidelines, internal-comms)
+
+**Supporting Files:**
+- 13 out of 16 skills include scripts/ directories
+- All 16 skills include examples/ directories
+- Helper scripts typically add 50-200+ lines of code
+- Examples vary from simple templates to complex demonstrations
 
 ## Your Workflow When Creating Skills
 
@@ -214,39 +228,62 @@ Before delivering the skill, verify:
 
 ## Example Skill Patterns
 
-### Pattern 1: Library/Tool Skill (e.g., xlsx, pptx, pdf)
+### Pattern 1: Library/Tool Skill (e.g., xlsx, pptx, pdf, d3js-visualization)
+**Actual sizes:** xlsx (372), pptx (424), pdf (542), d3js-visualization (417)
+
 Structure:
-1. Overview: What the library does
-2. Core Capabilities: Organized by feature category
-3. Code Examples: 10-15 examples from basic to advanced
-4. Helper Script: 15-35 utility functions
-5. Best Practices: Performance, error handling
+1. Overview: What the library does and when to use it
+2. Core Capabilities: Organized by feature category (reading, writing, formatting, etc.)
+3. Code Examples: 8-12 examples from basic to advanced
+4. Helper Script: 10-25 utility functions with comprehensive docstrings
+5. Best Practices: Performance, error handling, common patterns
 6. Common Pitfalls: Known issues with solutions
+7. Examples: Working templates and sample files
 
-Target: 1,300-1,800 lines
+**Target: 350-550 lines** (SKILL.md)
 
-### Pattern 2: Process/Workflow Skill (e.g., brand-guidelines, internal-comms)
+### Pattern 2: Workflow/Development Practice Skill (e.g., docker-workflow, git-advanced, code-reviewer)
+**Actual sizes:** code-reviewer (431), docker-workflow (457), git-advanced (497)
+
 Structure:
-1. Overview: Process explanation
-2. Core Elements: Key components to consider
-3. Detailed Workflows: Step-by-step instructions
-4. Templates: Ready-to-use examples
-5. Best Practices: Industry standards
-6. Common Pitfalls: Mistakes to avoid
+1. Overview: Process explanation and value proposition
+2. Core Concepts: Key principles and components
+3. Detailed Workflows: Step-by-step instructions for common tasks
+4. Code Examples: Scripts, configs, and practical demonstrations
+5. Best Practices: Industry standards and expert recommendations
+6. Common Pitfalls: Mistakes to avoid with solutions
+7. Integration Tips: How to incorporate into existing workflows
 
-Target: 1,500-4,500 lines
+**Target: 400-500 lines** (SKILL.md)
 
-### Pattern 3: Technical Guide Skill (e.g., mcp-builder)
+### Pattern 3: Comprehensive Technical Guide (e.g., mcp-builder, sql-expert, api-designer, error-detective)
+**Actual sizes:** mcp-builder (513), sql-expert (533), api-designer (558), error-detective (593)
+
 Structure:
-1. Fundamentals: Core concepts
-2. Architecture: How it works
-3. Implementation: Detailed instructions
-4. Code Examples: Complete working examples
-5. Integration: How to connect with other systems
-6. Best Practices: Production recommendations
-7. Testing & Debugging: Troubleshooting guide
+1. Fundamentals: Core concepts and mental models
+2. Architecture/Design Patterns: How systems work together
+3. Implementation Guide: Detailed step-by-step instructions
+4. Code Examples: Complete, runnable working examples
+5. Advanced Features: Complex scenarios and optimization
+6. Integration: How to connect with other tools/systems
+7. Best Practices: Production-ready recommendations
+8. Testing & Debugging: Comprehensive troubleshooting guide
+9. Common Pitfalls: Known issues and solutions
 
-Target: 2,500-4,500 lines
+**Target: 500-600 lines** (SKILL.md)
+
+### Pattern 4: Lightweight Reference Skill (e.g., brand-guidelines, internal-comms)
+**Actual sizes:** brand-guidelines (276), internal-comms (292)
+
+Structure:
+1. Overview: Purpose and scope
+2. Key Principles: Core guidelines or rules
+3. Templates: Ready-to-use examples
+4. Quick Reference: Checklists and common patterns
+5. Best Practices: Dos and don'ts
+6. Examples: Real-world demonstrations
+
+**Target: 275-350 lines** (SKILL.md)
 
 ## Guardrails and Requirements
 
@@ -265,8 +302,9 @@ Target: 2,500-4,500 lines
 - Use invalid YAML syntax
 - Include untested or broken code examples
 - Skip the validation checklist
-- Deliver skills shorter than 900 lines (unless very focused)
-- Omit helper scripts when code examples are central
+- Deliver skills shorter than 250 lines (unless it's a very focused reference guide)
+- Deliver skills longer than 600 lines without exceptional justification
+- Omit helper scripts when code examples are central to the skill
 - Use vague or generic descriptions
 
 ### When Uncertain:
