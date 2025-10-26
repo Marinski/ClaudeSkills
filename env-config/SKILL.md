@@ -9,14 +9,7 @@ description: Environment configuration and secrets management skill using UV for
 
 This skill provides comprehensive guidance for managing environment configurations, secrets, and environment variables in Python projects using UV (the modern Python package and project manager). It covers secure configuration patterns, multi-environment setups, .env file management, and secrets handling with encryption support.
 
-## Purpose
-
-Environment configuration is critical for:
-- Separating configuration from code (12-factor app principles)
-- Managing secrets securely across development, staging, and production
-- Enabling different configurations per environment
-- Preventing credential leaks in version control
-- Supporting team collaboration with shared configuration patterns
+Environment configuration is critical for separating configuration from code (12-factor app principles), managing secrets securely across environments, preventing credential leaks, and supporting team collaboration.
 
 ## When to Use This Skill
 
@@ -56,15 +49,7 @@ Use this skill when you need to:
 - README explains required variables and how to set them
 - Comments describe purpose and format of variables
 
-## UV Integration
-
-### Why UV?
-
-UV is a modern replacement for pip, pip-tools, virtualenv, and poetry. Benefits include:
-- **Speed**: 10-100x faster than pip
-- **Reliability**: Deterministic dependency resolution
-- **Simplicity**: Single tool for all Python project needs
-- **Compatibility**: Works with existing pip/requirements.txt projects
+## UV Setup
 
 ### Installing UV
 
@@ -79,60 +64,61 @@ pip install uv
 uv --version
 ```
 
-### UV Project Setup
+### Initialize UV Project
 
 ```bash
-# Create new project with UV
+# Create new project
 uv init my-project
 cd my-project
 
-# Initialize with pyproject.toml
+# Create virtual environment
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Add dependencies
-uv add python-dotenv cryptography
+uv add python-dotenv cryptography pydantic
 
 # Add dev dependencies
-uv add --dev pytest black ruff
-
-# Sync dependencies (like npm install)
-uv sync
+uv add --dev pytest pytest-env black ruff
 ```
 
 ## Environment Configuration Workflow
 
-### Phase 1: Project Initialization
+### Phase 1: Project Setup
 
-**1. Create UV Project Structure**
+**1. Create Project Structure**
 
 ```bash
 # Initialize UV project
 uv init your-project-name
 cd your-project-name
-
-# Create virtual environment
 uv venv
-
-# Activate environment
-source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate  # Windows
+source .venv/bin/activate
 ```
 
-**2. Set Up Configuration Files**
+**2. Install Configuration Dependencies**
 
-Create these essential files:
-- `.env.template` - Template showing required variables (committed)
-- `.env` - Actual secrets (in .gitignore)
+```bash
+uv add python-dotenv      # For .env file loading
+uv add cryptography       # For secrets encryption (optional)
+uv add pydantic          # For config validation (optional)
+uv add --dev pytest pytest-env
+```
+
+**3. Create Configuration Files**
+
+Essential files to create:
+- `.env.template` - Template showing required variables (commit this)
+- `.env` - Actual secrets (add to .gitignore)
 - `.env.development` - Development-specific config
 - `.env.production` - Production-specific config
-- `pyproject.toml` - UV project configuration
-- `secrets_template.json` - JSON-based secrets template (optional)
+- `config.py` - Configuration loading module
 
-**3. Update .gitignore**
+**4. Update .gitignore**
 
-Add to `.gitignore`:
-```
+```bash
+# Add to .gitignore
+cat >> .gitignore << 'EOF'
 # Environment files
 .env
 .env.local
@@ -145,27 +131,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-
-# Editor
-.vscode/
-.idea/
-*.swp
+EOF
 ```
 
-**4. Install Dependencies**
-
-```bash
-# Add core dependencies
-uv add python-dotenv  # For .env file loading
-uv add cryptography   # For secrets encryption (optional)
-uv add pydantic       # For config validation (optional)
-
-# Development dependencies
-uv add --dev pytest pytest-env
-uv add --dev python-dotenv[cli]  # For CLI tools
-```
-
-### Phase 2: Configuration Implementation
+### Phase 2: Create Configuration Templates
 
 **1. Create .env.template**
 
@@ -188,36 +157,22 @@ ANTHROPIC_API_KEY=sk-ant-api03-xxx
 OPENAI_API_KEY=sk-xxx
 OPENROUTER_API_KEY=sk-or-v1-xxx
 
-# External Services
-REDIS_URL=redis://localhost:6379/0
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-
 # Security
 SECRET_KEY=generate-random-secret-key-here
 JWT_SECRET=another-random-secret
-ENCRYPTION_KEY=base64-encoded-encryption-key
 
 # Feature Flags
 ENABLE_ANALYTICS=false
 ENABLE_CACHING=true
-RATE_LIMIT_ENABLED=true
 ```
 
 **2. Create Config Loading Module**
 
-Create `config.py`:
+Create `config.py` - see `references/api-reference.md` for complete implementation:
+
 ```python
-"""
-Environment configuration management with UV.
-Loads and validates environment variables.
-"""
 import os
-import sys
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 
 
@@ -230,142 +185,46 @@ class Config:
     """Application configuration from environment variables."""
 
     def __init__(self, env: str = None):
-        """
-        Initialize configuration.
-
-        Args:
-            env: Environment name (development, staging, production)
-                 If None, uses APP_ENV environment variable
-        """
-        # Determine environment
         self.env = env or os.getenv('APP_ENV', 'development')
-
-        # Load environment-specific .env file
         self._load_env_file()
-
-        # Validate required variables
         self._validate_required()
 
     def _load_env_file(self):
         """Load appropriate .env file based on environment."""
-        # Try environment-specific file first
         env_file = Path(f'.env.{self.env}')
         if env_file.exists():
             load_dotenv(env_file, override=True)
-            print(f"✓ Loaded configuration from {env_file}")
-
-        # Then load .env (can override)
         if Path('.env').exists():
-            load_dotenv('.env', override=False)  # Don't override env-specific
-            print("✓ Loaded configuration from .env")
+            load_dotenv('.env', override=False)
 
-    def _validate_required(self):
-        """Validate that required environment variables are set."""
-        required = self.get_required_vars()
-        missing = [var for var in required if not os.getenv(var)]
-
-        if missing:
-            raise ConfigError(
-                f"Missing required environment variables: {', '.join(missing)}\n"
-                f"Please check .env.template for required configuration."
-            )
-
-    @staticmethod
-    def get_required_vars() -> list[str]:
-        """
-        Define required environment variables.
-        Override this in subclasses for custom requirements.
-        """
-        return [
-            'APP_NAME',
-            'APP_ENV',
-        ]
-
-    # Application Settings
     @property
     def app_name(self) -> str:
         return os.getenv('APP_NAME', 'MyApp')
 
     @property
-    def app_env(self) -> str:
-        return self.env
-
-    @property
     def debug(self) -> bool:
         return os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
 
-    @property
-    def log_level(self) -> str:
-        return os.getenv('LOG_LEVEL', 'INFO')
-
-    # Database
-    @property
-    def database_url(self) -> Optional[str]:
-        return os.getenv('DATABASE_URL')
-
-    # API Keys
-    @property
-    def anthropic_api_key(self) -> Optional[str]:
-        return os.getenv('ANTHROPIC_API_KEY')
-
-    @property
-    def openai_api_key(self) -> Optional[str]:
-        return os.getenv('OPENAI_API_KEY')
-
-    # Security
-    @property
-    def secret_key(self) -> str:
-        key = os.getenv('SECRET_KEY')
-        if not key and not self.debug:
-            raise ConfigError("SECRET_KEY must be set in production")
-        return key or 'dev-secret-key-change-in-production'
+    # Add more properties as needed...
 
 
 # Global config instance
 config = Config()
-
-
-# Helper function for getting env vars with defaults
-def get_env(key: str, default: str = None, required: bool = False) -> str:
-    """
-    Get environment variable with optional default and validation.
-
-    Args:
-        key: Environment variable name
-        default: Default value if not set
-        required: If True, raises error when not set
-
-    Returns:
-        Environment variable value
-
-    Raises:
-        ConfigError: If required=True and variable not set
-    """
-    value = os.getenv(key, default)
-    if required and value is None:
-        raise ConfigError(f"Required environment variable '{key}' is not set")
-    return value
 ```
 
-**3. Using Config in Your Application**
+For complete Config class with all properties and validation, see `references/api-reference.md`.
+
+**3. Use Config in Application**
 
 ```python
-# main.py
 from config import config
 
 def main():
     print(f"Starting {config.app_name} in {config.app_env} mode")
-    print(f"Debug mode: {config.debug}")
 
     if config.anthropic_api_key:
-        print("✓ Anthropic API key loaded")
-
-    # Use config throughout your app
-    if config.debug:
-        print(f"Database: {config.database_url}")
-
-if __name__ == "__main__":
-    main()
+        # Use API key
+        print("✓ API key loaded")
 ```
 
 ### Phase 3: Multi-Environment Setup
@@ -377,26 +236,7 @@ if __name__ == "__main__":
 APP_ENV=development
 DEBUG=true
 LOG_LEVEL=DEBUG
-
-# Use local services
 DATABASE_URL=postgresql://localhost:5432/myapp_dev
-REDIS_URL=redis://localhost:6379/0
-
-# Test API keys (use free tier)
-ANTHROPIC_API_KEY=sk-ant-api03-dev-key
-```
-
-`.env.staging`:
-```bash
-APP_ENV=staging
-DEBUG=false
-LOG_LEVEL=INFO
-
-# Staging database
-DATABASE_URL=postgresql://staging-host:5432/myapp_staging
-
-# Real API keys (use staging/test accounts)
-ANTHROPIC_API_KEY=sk-ant-api03-staging-key
 ```
 
 `.env.production`:
@@ -404,12 +244,7 @@ ANTHROPIC_API_KEY=sk-ant-api03-staging-key
 APP_ENV=production
 DEBUG=false
 LOG_LEVEL=WARNING
-
-# Production database (never commit this file!)
 DATABASE_URL=postgresql://prod-host:5432/myapp_prod
-
-# Production API keys
-ANTHROPIC_API_KEY=sk-ant-api03-prod-key
 SECRET_KEY=super-secure-random-key
 ```
 
@@ -419,10 +254,6 @@ SECRET_KEY=super-secure-random-key
 # Development (default)
 uv run python main.py
 
-# Staging
-export APP_ENV=staging
-uv run python main.py
-
 # Production
 export APP_ENV=production
 uv run python main.py
@@ -430,106 +261,54 @@ uv run python main.py
 
 ### Phase 4: Secrets Management
 
-**1. Using JSON Secrets File (Alternative Pattern)**
+**1. Using JSON Secrets (Alternative Pattern)**
 
-`secrets_template.json`:
+Create `secrets_template.json`:
 ```json
 {
   "anthropic_api_key": "sk-ant-api03-xxx",
   "openai_api_key": "sk-xxx",
   "database_password": "your-password-here",
-  "encryption_key": "base64-encoded-key",
-  "comment": "Copy to secrets.json and fill in real values. Keep secrets.json private!"
+  "comment": "Copy to secrets.json and fill in real values"
 }
 ```
 
-**2. Loading JSON Secrets**
+**2. Load JSON Secrets**
+
+See `references/api-reference.md` for complete implementation:
 
 ```python
-# secrets_loader.py
 import json
-import os
 from pathlib import Path
 
-
 def load_secrets(secrets_file: str = 'secrets.json') -> dict:
-    """
-    Load secrets from JSON file with fallback to environment variables.
-
-    Args:
-        secrets_file: Path to secrets JSON file
-
-    Returns:
-        Dictionary of secrets
-    """
-    secrets_path = Path(secrets_file)
-
-    # Try loading from JSON file
-    if secrets_path.exists():
-        try:
-            with open(secrets_path, 'r') as f:
-                secrets = json.load(f)
-            print(f"✓ Loaded secrets from {secrets_file}")
-            return secrets
-        except json.JSONDecodeError as e:
-            print(f"⚠ Error parsing {secrets_file}: {e}")
-            print("  Falling back to environment variables")
-    else:
-        print(f"ℹ {secrets_file} not found, using environment variables")
-
+    """Load secrets from JSON with fallback to env vars."""
+    if Path(secrets_file).exists():
+        return json.load(open(secrets_file))
     # Fallback to environment variables
     return {
-        'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY', ''),
-        'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
-        'database_password': os.getenv('DATABASE_PASSWORD', ''),
+        'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY', '')
     }
-
-
-# Usage
-secrets = load_secrets()
-api_key = secrets.get('anthropic_api_key', os.getenv('ANTHROPIC_API_KEY', ''))
 ```
 
-**3. Encrypted Secrets (Advanced)**
+**3. Encrypted Secrets**
 
-For highly sensitive environments, use the encryption helper:
-
-```python
-# In your app
-from scripts.env_helper import encrypt_secrets, decrypt_secrets
-
-# Encrypt secrets file
-encrypt_secrets('secrets.json', 'secrets.encrypted', 'your-encryption-password')
-
-# Decrypt at runtime
-secrets = decrypt_secrets('secrets.encrypted', 'your-encryption-password')
-```
-
-See `scripts/env_helper.py` for encryption utilities.
+For encryption utilities and advanced secrets management, see:
+- `references/advanced-topics.md` - Encryption, rotation, auditing
+- `scripts/env_helper.py` - Encryption/decryption utilities
 
 ## Configuration Validation
 
 ### Using Pydantic for Type-Safe Config
 
 ```python
-# config_pydantic.py
 from pydantic import BaseSettings, Field, validator
 
 
 class Settings(BaseSettings):
-    """Type-safe application settings."""
-
-    # Application
     app_name: str = Field(default='MyApp', env='APP_NAME')
     app_env: str = Field(default='development', env='APP_ENV')
-    debug: bool = Field(default=False, env='DEBUG')
-
-    # Database
     database_url: str = Field(..., env='DATABASE_URL')  # Required
-    database_pool_size: int = Field(default=5, env='DATABASE_POOL_SIZE')
-
-    # API Keys
-    anthropic_api_key: str = Field(default='', env='ANTHROPIC_API_KEY')
 
     @validator('app_env')
     def validate_env(cls, v):
@@ -538,23 +317,14 @@ class Settings(BaseSettings):
             raise ValueError(f'app_env must be one of {allowed}')
         return v
 
-    @validator('database_pool_size')
-    def validate_pool_size(cls, v):
-        if v < 1 or v > 100:
-            raise ValueError('database_pool_size must be between 1 and 100')
-        return v
-
     class Config:
         env_file = '.env'
-        env_file_encoding = 'utf-8'
-        case_sensitive = False
 
 
-# Usage
 settings = Settings()
-print(settings.app_name)
-print(settings.database_url)
 ```
+
+For complete Pydantic configuration examples, see `references/api-reference.md`.
 
 ## Security Best Practices
 
@@ -562,94 +332,40 @@ print(settings.database_url)
 
 Always add to `.gitignore`:
 ```
-# Secrets and environment files
 .env
 .env.local
 .env.*.local
 secrets.json
-secrets.encrypted
-
-# Never commit production configs
 .env.production
-
-# UV and Python
 .venv/
-__pycache__/
-*.pyc
 ```
 
 ### 2. Secret Rotation
 
+Implement regular API key rotation:
 ```python
-# Implement secret rotation
 def rotate_api_key(old_key: str, new_key: str):
-    """
-    Rotate API key gracefully.
-
-    1. Add new key to environment
-    2. Update all services to use new key
-    3. Verify new key works
-    4. Remove old key
-    """
-    # Load current config
-    env_file = Path('.env')
-    content = env_file.read_text()
-
-    # Replace old key with new
-    updated = content.replace(old_key, new_key)
-
-    # Backup old config
-    backup = Path('.env.backup')
-    backup.write_text(content)
-
-    # Write new config
-    env_file.write_text(updated)
-
-    print("✓ API key rotated. Backup saved to .env.backup")
+    """Rotate API key gracefully with backup."""
+    # Implementation in references/advanced-topics.md
 ```
 
-### 3. Environment Variable Auditing
+### 3. Environment Auditing
 
+Regular security audits:
 ```python
-# Check for exposed secrets
 def audit_environment():
-    """Audit environment variables for security issues."""
-    issues = []
-
-    # Check for default/example values
-    dangerous_patterns = [
-        'xxx',
-        'example',
-        'test123',
-        'password',
-        'changeme',
-    ]
-
-    for key, value in os.environ.items():
-        if any(pattern in value.lower() for pattern in dangerous_patterns):
-            issues.append(f"⚠ {key} appears to have a default/test value")
-
-    # Check for required keys in production
-    if os.getenv('APP_ENV') == 'production':
-        required = ['SECRET_KEY', 'DATABASE_URL']
-        for key in required:
-            if not os.getenv(key):
-                issues.append(f"❌ Required key {key} not set in production")
-
-    if issues:
-        print("Security Issues Found:")
-        for issue in issues:
-            print(f"  {issue}")
-    else:
-        print("✓ No security issues detected")
+    """Check for security issues in environment variables."""
+    # Implementation in references/advanced-topics.md
 ```
+
+For complete security implementations, see `references/advanced-topics.md`.
 
 ## Testing Configuration
 
-### pytest with Environment Variables
+### Basic Test Setup
 
-`conftest.py`:
 ```python
+# conftest.py
 import pytest
 import os
 
@@ -658,150 +374,78 @@ import os
 def test_env():
     """Set up test environment variables."""
     original = os.environ.copy()
-
-    # Set test values
     os.environ['APP_ENV'] = 'testing'
     os.environ['DEBUG'] = 'true'
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
-
     yield
-
-    # Restore original environment
     os.environ.clear()
     os.environ.update(original)
 
 
 @pytest.fixture
 def config(test_env):
-    """Provide clean config for each test."""
     from config import Config
     return Config(env='testing')
 ```
 
-`test_config.py`:
+### Example Tests
+
 ```python
 def test_config_loading(config):
-    """Test configuration loads correctly."""
     assert config.app_env == 'testing'
     assert config.debug is True
 
 
 def test_missing_required_var():
-    """Test error raised for missing required variables."""
-    import os
-    from config import Config, ConfigError
-
-    # Remove required var
-    old_val = os.environ.pop('APP_NAME', None)
-
-    try:
-        with pytest.raises(ConfigError):
-            Config()
-    finally:
-        if old_val:
-            os.environ['APP_NAME'] = old_val
+    from config import ConfigError
+    with pytest.raises(ConfigError):
+        Config()  # Missing required vars
 ```
 
-## UV Project Configuration
+For comprehensive testing guide, see `references/testing-guide.md`.
 
-### pyproject.toml Example
-
-See `examples/pyproject.toml` for a complete UV project configuration including:
-- Project metadata
-- Dependencies
-- Development dependencies
-- Scripts and commands
-- Build system configuration
-
-### UV Common Commands
+## UV Commands Reference
 
 ```bash
-# Install dependencies
-uv sync
+# Dependency management
+uv sync                    # Install all dependencies
+uv add requests           # Add dependency
+uv add --dev pytest       # Add dev dependency
+uv remove requests        # Remove dependency
 
-# Add new dependency
-uv add requests
-uv add --dev pytest
+# Environment management
+uv venv                   # Create virtual environment
+uv lock --upgrade         # Update dependencies
 
-# Remove dependency
-uv remove requests
+# Running scripts
+uv run python main.py     # Run with UV environment
+uv run pytest            # Run tests
 
-# Update dependencies
-uv lock --upgrade
-
-# Run script
-uv run python main.py
-uv run pytest
-
-# Show dependency tree
-uv tree
-
-# Create requirements.txt (for compatibility)
+# Compatibility
 uv pip compile pyproject.toml -o requirements.txt
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**1. Environment variables not loading**
-```python
-# Debug: Print loaded variables
-import os
-from dotenv import load_dotenv
-
-load_dotenv(verbose=True)  # Shows what's being loaded
-print(f"APP_NAME: {os.getenv('APP_NAME')}")
-```
-
-**2. Wrong environment loaded**
-```python
-# Explicitly set environment
-os.environ['APP_ENV'] = 'development'
-from config import config
-print(f"Using environment: {config.app_env}")
-```
-
-**3. UV sync fails**
-```bash
-# Clear UV cache
-uv cache clean
-
-# Reinstall dependencies
-rm -rf .venv
-uv venv
-uv sync
 ```
 
 ## Helper Scripts
 
 This skill provides utility scripts in `scripts/`:
 
-- `env_helper.py` - Core utilities for env management, validation, encryption
+- `env_helper.py` - Core utilities for env management
   - Parse and validate .env files
   - Check for missing variables
   - Encrypt/decrypt secrets files
   - Compare environments
   - Generate .env templates
 
-See script documentation for usage examples.
+Usage:
+```bash
+# Validate .env file
+python scripts/env_helper.py validate .env
 
-## Additional Resources
+# Encrypt secrets
+python scripts/env_helper.py encrypt secrets.json secrets.encrypted
 
-**Examples Directory:**
-- `.env.example` - Comprehensive .env template
-- `pyproject.toml` - UV project configuration
-- `secrets_template.json` - JSON secrets template
-
-**UV Documentation:**
-- Official docs: https://docs.astral.sh/uv/
-- Installation: https://docs.astral.sh/uv/getting-started/installation/
-- Project guide: https://docs.astral.sh/uv/guides/projects/
-
-**Python Packages:**
-- `python-dotenv`: https://github.com/theskumar/python-dotenv
-- `pydantic`: https://docs.pydantic.dev/
-- `cryptography`: https://cryptography.io/
+# Compare environments
+python scripts/env_helper.py compare .env.development .env.production
+```
 
 ## Quick Reference
 
@@ -825,7 +469,6 @@ See script documentation for usage examples.
 Use consistent naming:
 - `APP_*` - Application settings
 - `DATABASE_*` - Database configuration
-- `REDIS_*` - Redis configuration
 - `*_API_KEY` - API keys and tokens
 - `*_SECRET` - Secret keys
 - `ENABLE_*` - Feature flags
@@ -839,5 +482,45 @@ Use consistent naming:
 - [ ] Required variables validated on startup
 - [ ] Secrets encrypted at rest (if needed)
 - [ ] Regular secret rotation
-- [ ] Audit logs for config changes
 - [ ] Team training on secure practices
+
+## Additional Resources
+
+### Documentation in This Skill
+
+- **`references/api-reference.md`** - Complete Config class implementation, Pydantic validation, JSON secrets loading
+- **`references/advanced-topics.md`** - Encryption, secret rotation, auditing, multi-tenant config, cloud integration
+- **`references/testing-guide.md`** - pytest setup, mocking, validation testing, CI/CD examples
+- **`references/troubleshooting.md`** - Common issues, environment-specific problems, debugging techniques
+
+### Examples Directory
+
+- `.env.example` - Comprehensive .env template
+- `pyproject.toml` - UV project configuration
+- `secrets_template.json` - JSON secrets template
+
+### External Resources
+
+- **UV Documentation**: https://docs.astral.sh/uv/
+- **python-dotenv**: https://github.com/theskumar/python-dotenv
+- **Pydantic**: https://docs.pydantic.dev/
+- **12-Factor App Config**: https://12factor.net/config
+
+## Troubleshooting
+
+For common issues and solutions, see `references/troubleshooting.md`:
+
+- Environment variables not loading
+- Wrong environment loaded
+- UV sync failures
+- Import errors
+- Secrets decryption issues
+- Performance optimization
+- Security issues and remediation
+- Docker integration problems
+
+Quick debug:
+```python
+from dotenv import load_dotenv
+load_dotenv(verbose=True)  # Shows loading process
+```

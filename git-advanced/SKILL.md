@@ -9,6 +9,14 @@ description: "Advanced Git operations and workflows including interactive rebasi
 
 Master advanced Git workflows for complex version control scenarios. This skill covers sophisticated operations beyond basic commits and merges, including interactive rebasing, advanced conflict resolution, history manipulation, and strategic branch management.
 
+Use this skill when you need to:
+- Clean up messy commit history before code review
+- Resolve complex merge conflicts strategically
+- Hunt down bugs with binary search (bisect)
+- Recover lost commits or undo mistakes
+- Implement team branching strategies
+- Rewrite history safely
+
 ## Core Capabilities
 
 ### Interactive Rebasing
@@ -60,9 +68,6 @@ git rebase --continue
 
 # Abort and return to original state
 git rebase --abort
-
-# Skip problematic commit
-git rebase --skip
 ```
 
 ### Conflict Resolution
@@ -72,10 +77,6 @@ git checkout --ours <file>
 
 # Accept theirs (incoming branch)
 git checkout --theirs <file>
-
-# Show conflict in 3-way diff
-git diff --ours
-git diff --theirs
 
 # List conflicted files
 git diff --name-only --diff-filter=U
@@ -88,11 +89,7 @@ git add <file>
 ```bash
 # Start bisect session
 git bisect start
-
-# Mark current commit as bad
 git bisect bad
-
-# Mark known good commit
 git bisect good <commit-hash>
 
 # Automate with test script
@@ -112,9 +109,6 @@ git cherry-pick -n <commit-hash>
 
 # Cherry-pick range of commits
 git cherry-pick A^..B
-
-# Abort cherry-pick
-git cherry-pick --abort
 ```
 
 ### Reflog Recovery
@@ -127,12 +121,9 @@ git checkout -b recovery <commit-hash>
 
 # Reset to previous state
 git reset --hard HEAD@{2}
-
-# Find dropped stashes
-git fsck --unreachable | grep commit
 ```
 
-## Detailed Workflows
+## Core Workflows
 
 ### 1. Interactive Rebase Workflow
 
@@ -148,12 +139,8 @@ git fsck --unreachable | grep commit
 # 1. Start interactive rebase for last N commits
 git rebase -i HEAD~5
 
-# Interactive editor opens with:
-# pick abc1234 Add feature X
-# pick def5678 Fix typo
-# pick ghi9012 WIP commit
-# pick jkl3456 Update documentation
-# pick mno7890 Refactor feature X
+# Interactive editor opens with commit list
+# Modify commands to reorganize history
 ```
 
 **Rebase Commands:**
@@ -163,31 +150,31 @@ git rebase -i HEAD~5
 - `squash` (s): Combine with previous commit, keep message
 - `fixup` (f): Combine with previous commit, discard message
 - `drop` (d): Remove commit entirely
-- `exec` (x): Run shell command
 
-**Example Cleanup:**
+**Example:**
 ```bash
+# Before
+pick abc1234 Add feature X
+pick def5678 Fix typo
+pick ghi9012 WIP commit
+pick jkl3456 Update documentation
+
+# After cleanup
 pick abc1234 Add feature X
 fixup def5678 Fix typo
 drop ghi9012 WIP commit
 reword jkl3456 Update documentation
-squash mno7890 Refactor feature X
 ```
-
-**Result:**
-- Three commits become two
-- Typo fix merged into feature
-- WIP commit removed
-- Documentation message rewritten
-- Refactor squashed with feature
 
 **Safety Tips:**
 - Never rebase commits already pushed to shared branches
-- Create backup branch: `git branch backup-branch`
+- Create backup branch: `git branch backup`
 - Use `git reflog` if something goes wrong
 - Force push carefully: `git push --force-with-lease`
 
-### 2. Advanced Conflict Resolution
+For detailed examples and advanced techniques, see `examples/interactive_rebase.md`.
+
+### 2. Conflict Resolution Workflow
 
 **Understanding Conflict Markers:**
 ```
@@ -198,62 +185,45 @@ Their code from merging branch
 >>>>>>> branch-name (Incoming Change)
 ```
 
-**Resolution Strategies:**
+**Resolution Process:**
 
-**Strategy 1: Manual Resolution**
 ```bash
 # 1. Identify conflicts
 git status
 
-# 2. Open file and manually resolve
-# Edit between <<< === >>> markers
+# 2. Choose resolution strategy:
 
-# 3. Stage resolved file
+# Strategy A: Manual resolution
+vim <file>  # Edit between markers
 git add <file>
 
-# 4. Continue merge/rebase
+# Strategy B: Accept one side
+git checkout --ours <file>    # Keep yours
+git checkout --theirs <file>  # Keep theirs
+git add <file>
+
+# Strategy C: Use merge tool
+git mergetool
+
+# 3. Continue operation
 git merge --continue
 # or
 git rebase --continue
 ```
 
-**Strategy 2: Accept One Side**
+**Three-Way Diff:**
 ```bash
-# Accept all changes from current branch
-git checkout --ours <file>
+# Show what YOU changed
+git diff --ours <file>
 
-# Accept all changes from merging branch
-git checkout --theirs <file>
+# Show what THEY changed
+git diff --theirs <file>
 
-# Stage and continue
-git add <file>
-git merge --continue
+# Show common ancestor
+git diff --base <file>
 ```
 
-**Strategy 3: Use Merge Tool**
-```bash
-# Configure merge tool (one-time setup)
-git config --global merge.tool vimdiff
-# or meld, kdiff3, p4merge
-
-# Launch merge tool
-git mergetool
-
-# Review changes, save, and exit
-# Tool creates .orig backup files
-git clean -f *.orig  # Remove backups
-```
-
-**Complex Conflict Pattern:**
-```bash
-# For large conflicts, use 3-way diff
-git diff --ours      # Your changes
-git diff --theirs    # Their changes
-git diff --base      # Common ancestor
-
-# Cherry-pick specific hunks
-git checkout --patch <branch> <file>
-```
+For common conflict patterns and solutions, see `examples/conflict_resolution.md`.
 
 ### 3. Git Bisect for Bug Hunting
 
@@ -267,24 +237,17 @@ git bisect start
 # 2. Mark current state as bad
 git bisect bad
 
-# 3. Mark known good commit (e.g., last release)
+# 3. Mark known good commit
 git bisect good v1.0.0
 
-# Git checks out middle commit
-# Bisecting: 50 revisions left to test
-
-# 4. Test the code manually
+# 4. Test the code (Git checks out middle commit)
 # Run app, check if bug exists
 
-# 5a. If bug exists:
-git bisect bad
-
-# 5b. If bug doesn't exist:
-git bisect good
+# 5. Mark result
+git bisect bad   # If bug exists
+git bisect good  # If bug doesn't exist
 
 # Repeat until Git finds first bad commit
-# Git will output:
-# abc1234 is the first bad commit
 
 # 6. End bisect
 git bisect reset
@@ -294,14 +257,8 @@ git bisect reset
 ```bash
 # Create test script (test.sh)
 #!/bin/bash
-# Exit 0 if good, 1 if bad
-
-# Run your test
 npm test
 exit $?
-
-# Make executable
-chmod +x test.sh
 
 # Run automated bisect
 git bisect start
@@ -310,174 +267,32 @@ git bisect good v1.0.0
 git bisect run ./test.sh
 
 # Git automatically finds bad commit
-# Review result
-git show <bad-commit>
-
-# End bisect
 git bisect reset
 ```
 
-**Skip Commits:**
+### 4. Branch Management
+
+**Quick Cleanup:**
 ```bash
-# Skip unbuildable commits
-git bisect skip
-
-# Skip range of commits
-git bisect skip v1.0.0..v1.2.0
-```
-
-### 4. Branch Cleanup and Management
-
-**Use Helper Script:**
-```bash
-# Run branch cleanup helper
+# Use helper script
 bash scripts/git_helper.sh cleanup-branches
-```
 
-**Manual Cleanup:**
-```bash
-# List all branches
-git branch -a
-
-# List merged branches
-git branch --merged main
-
-# Delete merged local branches
-git branch -d feature/completed
-
-# Force delete unmerged branch
-git branch -D feature/abandoned
-
-# Delete remote branch
-git push origin --delete feature/old
-
-# Prune deleted remote branches
+# Or manual cleanup
+git branch --merged main | grep -v "\*\|main\|develop" | xargs git branch -d
 git fetch --prune
-
-# Remove all merged branches (except main/develop)
-git branch --merged | grep -v "\*\|main\|develop" | xargs -n 1 git branch -d
 ```
 
 **Stale Branch Detection:**
 ```bash
 # Show branches with last commit date
 for branch in $(git branch -r | grep -v HEAD); do
-    echo -e "$(git show --format="%ci %cr %an" $branch | head -n 1)\t$branch"
+    echo -e "$(git show --format="%ci %cr" $branch | head -n 1)\t$branch"
 done | sort -r
-
-# Archive old branches as tags
-git tag archive/feature-x feature/feature-x
-git branch -D feature/feature-x
-git push origin --delete feature/feature-x
 ```
 
-## Branch Strategy Workflows
+For detailed branch management strategies, see `references/branch-management.md`.
 
-### Git Flow
-
-**Branch Types:**
-- `main`: Production-ready code
-- `develop`: Integration branch for features
-- `feature/*`: New feature development
-- `release/*`: Release preparation
-- `hotfix/*`: Production bug fixes
-
-**Feature Development:**
-```bash
-# Start feature from develop
-git checkout develop
-git pull origin develop
-git checkout -b feature/user-auth
-
-# Work on feature
-git add .
-git commit -m "Add authentication logic"
-
-# Finish feature
-git checkout develop
-git merge --no-ff feature/user-auth
-git push origin develop
-git branch -d feature/user-auth
-```
-
-**Release Process:**
-```bash
-# Create release branch
-git checkout develop
-git checkout -b release/v1.2.0
-
-# Prepare release (update versions, docs)
-git commit -m "Prepare v1.2.0 release"
-
-# Merge to main
-git checkout main
-git merge --no-ff release/v1.2.0
-git tag -a v1.2.0 -m "Release version 1.2.0"
-git push origin main --tags
-
-# Merge back to develop
-git checkout develop
-git merge --no-ff release/v1.2.0
-git push origin develop
-
-# Delete release branch
-git branch -d release/v1.2.0
-```
-
-**Hotfix Process:**
-```bash
-# Create hotfix from main
-git checkout main
-git checkout -b hotfix/security-patch
-
-# Fix issue
-git commit -m "Fix security vulnerability"
-
-# Merge to main
-git checkout main
-git merge --no-ff hotfix/security-patch
-git tag -a v1.2.1 -m "Hotfix v1.2.1"
-git push origin main --tags
-
-# Merge to develop
-git checkout develop
-git merge --no-ff hotfix/security-patch
-git push origin develop
-
-# Delete hotfix branch
-git branch -d hotfix/security-patch
-```
-
-### Trunk-Based Development
-
-**Principles:**
-- Single main branch (trunk)
-- Short-lived feature branches (< 1 day)
-- Frequent integration
-- Feature flags for incomplete features
-
-**Workflow:**
-```bash
-# Create short-lived feature branch
-git checkout main
-git pull origin main
-git checkout -b feature/quick-fix
-
-# Make changes and push quickly
-git add .
-git commit -m "Implement feature behind flag"
-git push origin feature/quick-fix
-
-# Create PR and merge same day
-# After merge, delete branch
-git checkout main
-git pull origin main
-git branch -d feature/quick-fix
-```
-
-## Recovery and History Rewriting
-
-### Reflog Recovery
+### 5. Reflog Recovery
 
 **Recover Deleted Branch:**
 ```bash
@@ -485,10 +300,8 @@ git branch -d feature/quick-fix
 git reflog
 
 # Find commit where branch was deleted
-# Output shows: abc1234 HEAD@{5}: checkout: moving from feature-x to main
-
 # Restore branch
-git checkout -b feature-x abc1234
+git checkout -b feature-x <commit-hash>
 ```
 
 **Undo Bad Reset:**
@@ -497,9 +310,6 @@ git checkout -b feature-x abc1234
 
 # View reflog
 git reflog
-
-# Find state before reset
-# Output: def5678 HEAD@{1}: reset: moving to HEAD~5
 
 # Restore previous state
 git reset --hard HEAD@{1}
@@ -510,38 +320,56 @@ git reset --hard HEAD@{1}
 # Find dangling commits
 git fsck --lost-found
 
-# Or use reflog
-git reflog show --all
-
 # Cherry-pick recovered commit
 git cherry-pick <lost-commit-hash>
 ```
 
-### Safe History Rewriting
+For comprehensive recovery techniques, see `references/reflog-recovery.md`.
 
-**Amend Last Commit:**
+## Branch Strategy Implementation
+
+This skill supports implementing various branching strategies. Choose based on your team's needs:
+
+### Git Flow
+**Best for:** Projects with scheduled releases, multiple production versions
+
+**Branch Types:**
+- `main`: Production-ready code
+- `develop`: Integration branch
+- `feature/*`: New features
+- `release/*`: Release preparation
+- `hotfix/*`: Production fixes
+
+**Quick Start:**
 ```bash
-# Change last commit message
-git commit --amend -m "New message"
-
-# Add forgotten file to last commit
-git add forgotten-file.txt
-git commit --amend --no-edit
-
-# Change author of last commit
-git commit --amend --author="Name <email@example.com>"
+# Feature development
+git checkout develop
+git checkout -b feature/user-auth
+# Work on feature
+git checkout develop
+git merge --no-ff feature/user-auth
 ```
 
-**Filter Branch (Remove Sensitive Data):**
-```bash
-# Remove file from entire history
-git filter-branch --tree-filter 'rm -f passwords.txt' HEAD
+### Trunk-Based Development
+**Best for:** Continuous deployment, fast-moving teams
 
-# Better: Use BFG Repo-Cleaner (faster)
-java -jar bfg.jar --delete-files passwords.txt
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
+**Principles:**
+- Single main branch
+- Short-lived feature branches (< 1 day)
+- Frequent integration
+- Feature flags for incomplete work
+
+**Quick Start:**
+```bash
+# Create short-lived branch
+git checkout main
+git checkout -b feature/quick-fix
+# Work and merge same day
+git checkout main
+git merge feature/quick-fix
 ```
+
+For complete branch strategy workflows, see `examples/branch_strategies.md`.
 
 ## Best Practices
 
@@ -555,7 +383,7 @@ git gc --prune=now --aggressive
 - Understand both sides of the conflict
 - Test thoroughly after resolution
 - Use meaningful merge commit messages
-- Document complex resolutions in commit message
+- Document complex resolutions
 
 ### Branch Management
 - Delete merged branches promptly
@@ -568,6 +396,8 @@ git gc --prune=now --aggressive
 - Write clear, descriptive commit messages
 - Keep commits atomic (one logical change)
 - Use conventional commit format when possible
+
+For comprehensive best practices, see `references/best-practices.md`.
 
 ## Troubleshooting
 
@@ -608,17 +438,25 @@ git checkout -b feature-v2
 git push origin feature-v2
 ```
 
+For detailed troubleshooting, see `references/troubleshooting.md`.
+
 ## Additional Resources
 
-See detailed guides in `examples/`:
-- `interactive_rebase.md`: Step-by-step rebase examples
-- `conflict_resolution.md`: Common conflict patterns and solutions
-- `branch_strategies.md`: Complete Git Flow and trunk-based workflows
+### Detailed Guides
+- `examples/interactive_rebase.md`: Step-by-step rebase examples with scenarios
+- `examples/conflict_resolution.md`: Common conflict patterns and solutions
+- `examples/branch_strategies.md`: Complete Git Flow and trunk-based workflows
 
-Helper scripts in `scripts/`:
-- `git_helper.sh`: Branch cleanup and conflict resolution utilities
+### Reference Documentation
+- `references/branch-management.md`: Branch cleanup automation and strategies
+- `references/reflog-recovery.md`: Recovery techniques and history rewriting
+- `references/best-practices.md`: Comprehensive best practices and quality standards
+- `references/troubleshooting.md`: Common issues and emergency recovery
 
-## Quick Reference
+### Helper Scripts
+- `scripts/git_helper.sh`: Branch cleanup and conflict resolution utilities
+
+## Quick Reference Commands
 
 ### Must-Know Commands
 ```bash
@@ -645,15 +483,14 @@ git reflog
 # Cleanup
 git branch --merged | xargs git branch -d
 git fetch --prune
-git gc --aggressive
 ```
 
 ### Safety First
-1. **Always backup before history rewrite**: `git branch backup`
-2. **Never force push to shared branches**: Use `--force-with-lease`
-3. **Test after conflicts**: Don't assume resolution is correct
-4. **Document complex operations**: Leave comments in merge commits
-5. **Use reflog**: It's your safety net for 30+ days
+1. Always backup before history rewrite: `git branch backup`
+2. Never force push to shared branches: Use `--force-with-lease`
+3. Test after conflicts: Don't assume resolution is correct
+4. Document complex operations: Leave comments in merge commits
+5. Use reflog: It's your safety net for 30+ days
 
 ---
 
